@@ -96,13 +96,19 @@ app.prepare().then(() => {
     socket.on('startGame', (roomCode) => {
       const room = rooms.get(roomCode);
       if (room && socket.id === room.host) {
-        room.state = 'submitting';
-        room.currentRound = 0;
-        const currentIdiom = room.idioms[room.currentRound];
-        io.to(roomCode).emit('gameStarted', {
-          currentIdiom,
-          players: room.players
-        });
+        // In player mode (host is a player), require 3 players minimum
+        const isPlayerMode = room.players.some(p => p.id === room.host);
+        const hasEnoughPlayers = isPlayerMode ? room.players.length >= 3 : room.players.length >= 1;
+        
+        if (hasEnoughPlayers) {
+          room.state = 'submitting';
+          room.currentRound = 0;
+          const currentIdiom = room.idioms[room.currentRound];
+          io.to(roomCode).emit('gameStarted', {
+            currentIdiom,
+            players: room.players
+          });
+        }
       }
     });
 
@@ -133,23 +139,40 @@ app.prepare().then(() => {
     socket.on('submitVote', ({ roomCode, votedForId }) => {
       const room = rooms.get(roomCode);
       if (room && room.state === 'voting') {
-        room.votes.set(socket.id, votedForId);
+        // Find the answer this player is voting for
+        const votedAnswer = Array.from(room.submissions.entries())
+          .find(([playerId]) => playerId === votedForId);
+        
+        // Only allow vote if:
+        // 1. The answer exists
+        // 2. It's not the player's own answer
+        // 3. The player hasn't voted yet
+        if (votedAnswer && 
+            votedAnswer[0] !== socket.id && 
+            !Array.from(room.votes.keys()).includes(socket.id)) {
+          room.votes.set(socket.id, votedForId);
+        }
 
-        // Check if all players have voted
-        if (room.votes.size === room.players.length) {
+        // Check if all players have voted (excluding the correct answer)
+        const expectedVotes = room.players.length - 1;
+        if (room.votes.size === expectedVotes) {
           // Calculate scores
           const correctAnswer = room.idioms[room.currentRound];
           room.players.forEach(player => {
-            // Points for correct votes
-            if (room.votes.get(player.id) === correctAnswer) {
+            const playerSubmission = room.submissions.get(player.id);
+            
+            // Points for submitting the correct answer
+            if (playerSubmission === correctAnswer) {
               player.score += 1000;
             }
-            // Points for fooling others
-            room.votes.forEach(votedForId => {
-              if (votedForId === player.id && votedForId !== correctAnswer) {
-                player.score += 500;
-              }
-            });
+            
+            // Points for fooling others (only if answer is not correct)
+            if (playerSubmission !== correctAnswer) {
+              const fooledCount = Array.from(room.votes.values())
+                .filter(vote => vote === player.id)
+                .length;
+              player.score += fooledCount * 500;
+            }
           });
 
           // Clear submissions and votes for next round

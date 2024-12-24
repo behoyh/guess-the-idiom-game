@@ -14,10 +14,11 @@ type GameState = 'waiting' | 'submitting' | 'voting' | 'results' | 'gameOver';
 
 export default function JoinGame() {
   const searchParams = useSearchParams();
-  const roomCode = searchParams.get('code')|| '';
+  const roomCode = searchParams.get('code') || '';
   const playerName = searchParams.get('name') || '';
 
   const [socket, setSocket] = useState<Socket | null>(null);
+  const [hasSubmitted, setHasSubmitted] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [gameState, setGameState] = useState<GameState>('waiting');
   const [players, setPlayers] = useState<Player[]>([]);
@@ -56,6 +57,7 @@ export default function JoinGame() {
     newSocket.on('startVoting', (submittedAnswers) => {
       setGameState('voting');
       setAnswers(submittedAnswers);
+      setHasSubmitted(false);
     });
 
     newSocket.on('roundEnd', ({ scores: roundScores, nextRound }) => {
@@ -136,13 +138,22 @@ export default function JoinGame() {
                 placeholder="Enter your answer..."
               />
               <button
-                onClick={submitAnswer}
+                onClick={() => {
+                  if (socket && answer.trim()) {
+                    socket.emit('submitAnswer', { roomCode, answer: answer.trim() });
+                    setHasSubmitted(true);
+                  } }}
                 disabled={!answer.trim()}
                 className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Submit Answer
               </button>
             </div>
+            {(hasSubmitted) && (
+              <div className="mt-4 text-center p-6 bg-gray-50 rounded-lg">
+                <p className="text-lg text-gray-600">Waiting for all players to submit their answers...</p>
+              </div>
+            )}
           </div>
         );
 
@@ -151,16 +162,24 @@ export default function JoinGame() {
           <div className="space-y-4">
             <h2 className="text-2xl font-bold">Vote for the correct answer:</h2>
             <ul className="space-y-2">
-              {answers.map((answer, index) => (
-                <li key={index}>
-                  <button
-                    onClick={() => submitVote(answer.playerId)}
-                    className="w-full text-left p-4 bg-white rounded-lg shadow hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
-                  >
-                    {answer.answer}
-                  </button>
-                </li>
-              ))}
+              {answers.map((answer, index) => {
+                const isOwnAnswer = players.find(p => p.name === playerName)?.id === answer.playerId;
+                return (
+                  <li key={index}>
+                    <button
+                      onClick={() => submitVote(answer.playerId)}
+                      disabled={isOwnAnswer}
+                      className={`w-full text-left p-4 bg-white rounded-lg shadow ${isOwnAnswer
+                          ? 'opacity-50 cursor-not-allowed'
+                          : 'hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500'
+                        }`}
+                    >
+                      {answer.answer}
+                      {isOwnAnswer && <span className="ml-2 text-sm text-gray-500">(Your answer)</span>}
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         );

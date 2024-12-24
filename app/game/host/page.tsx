@@ -25,6 +25,7 @@ export default function HostGame() {
   const [scores, setScores] = useState<Player[]>([]);
   const [answer, setAnswer] = useState<string>('');
   const [isPlayerMode, setIsPlayerMode] = useState<boolean>(false);
+  const [hasSubmitted, setHasSubmitted] = useState<boolean>(false);
 
   useEffect(() => {
     const newSocket = io('http://localhost:3000');
@@ -59,6 +60,7 @@ export default function HostGame() {
     newSocket.on('startVoting', (submittedAnswers) => {
       setGameState('voting');
       setAnswers(submittedAnswers);
+      setHasSubmitted(false);
     });
 
     newSocket.on('roundEnd', ({ scores: roundScores, nextRound }) => {
@@ -79,7 +81,7 @@ export default function HostGame() {
     return () => {
       newSocket.close();
     };
-  }, [playerName]);
+  }, [playerName, isPlayerMode]);
 
   const startGame = () => {
     if (socket && ((isPlayerMode && players.length >= 2) || (!isPlayerMode && players.length >= 1))) {
@@ -101,16 +103,15 @@ export default function HostGame() {
           <div className="space-y-6">
             <div className="bg-gray-100 p-6 rounded-lg text-center">
               <div className="mb-4">
-                <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-                  isPlayerMode ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-                }`}>
+                <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${isPlayerMode ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                  }`}>
                   {isPlayerMode ? 'Player Mode' : 'TV Mode'}
                 </span>
               </div>
               <h2 className="text-xl font-semibold mb-2">Room Code:</h2>
               <p className="text-4xl font-bold text-purple-600">{roomCode}</p>
               <p className="mt-2 text-gray-600">
-                {isPlayerMode 
+                {isPlayerMode
                   ? "Share this code with other players to join"
                   : "Join at guess-the-idiom.com"}
               </p>
@@ -120,8 +121,8 @@ export default function HostGame() {
               <div className="flex justify-between items-center mb-3">
                 <h2 className="text-xl font-semibold">Players:</h2>
                 <span className="text-sm text-gray-600">
-                  {isPlayerMode 
-                    ? `${players.length} of 2 minimum players`
+                  {isPlayerMode
+                    ? `${players.length} of 3 minimum players`
                     : `${players.length} of 1 minimum players`}
                 </span>
               </div>
@@ -156,7 +157,7 @@ export default function HostGame() {
 
             <button
               onClick={startGame}
-              disabled={(isPlayerMode && players.length < 2) || (!isPlayerMode && players.length < 1)}
+              disabled={(isPlayerMode && players.length < 3) || (!isPlayerMode && players.length < 1)}
               className="w-full py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Start Game
@@ -169,7 +170,7 @@ export default function HostGame() {
           <div className="space-y-4">
             <h2 className="text-2xl font-bold">Current Idiom:</h2>
             <p className="text-xl bg-white p-4 rounded-lg shadow">{currentIdiom}</p>
-            
+
             {isPlayerMode && (
               <div className="space-y-2">
                 <label htmlFor="answer" className="block text-sm font-medium text-gray-700">
@@ -187,6 +188,7 @@ export default function HostGame() {
                   onClick={() => {
                     if (socket && answer.trim()) {
                       socket.emit('submitAnswer', { roomCode, answer: answer.trim() });
+                      setHasSubmitted(true);
                     }
                   }}
                   disabled={!answer.trim()}
@@ -196,17 +198,12 @@ export default function HostGame() {
                 </button>
               </div>
             )}
-            
-            <div className="mt-4">
-              <h3 className="text-lg font-medium mb-2">Waiting for answers from:</h3>
-              <ul className="space-y-2">
-                {players.map((player) => (
-                  <li key={player.id} className="bg-white p-3 rounded-lg shadow">
-                    {player.name}
-                  </li>
-                ))}
-              </ul>
-            </div>
+
+            {(hasSubmitted || !isPlayerMode) && (
+              <div className="mt-4 text-center p-6 bg-gray-50 rounded-lg">
+                <p className="text-lg text-gray-600">Waiting for all players to submit their answers...</p>
+              </div>
+            )}
           </div>
         );
 
@@ -217,27 +214,40 @@ export default function HostGame() {
               {isPlayerMode ? "Vote for the correct answer:" : "Players are voting..."}
             </h2>
             <ul className="space-y-2">
-              {answers.map((answer, index) => (
-                <li key={index}>
-                  {isPlayerMode ? (
-                    <button
-                      onClick={() => {
-                        if (socket) {
-                          socket.emit('submitVote', { roomCode, votedForId: answer.playerId });
-                        }
-                      }}
-                      className="w-full text-left p-4 bg-white rounded-lg shadow hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
-                    >
-                      {answer.answer}
-                    </button>
-                  ) : (
-                    <div className="w-full p-4 bg-white rounded-lg shadow">
-                      {answer.answer}
-                    </div>
-                  )}
-                </li>
-              ))}
+              {
+                answers.map((answer, index) => {
+                  const isOwnAnswer = players.find(p => p.name === playerName)?.id === answer.playerId;
+                  return (<li key={index}>
+                    {isPlayerMode ? (
+                      <button
+                        disabled={isOwnAnswer}
+                        onClick={() => {
+                          if (socket) {
+                            socket.emit('submitVote', { roomCode, votedForId: answer.playerId });
+                            setHasSubmitted(true);
+                          }
+                        }}
+                        className={`w-full text-left p-4 bg-white rounded-lg shadow hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 ${isOwnAnswer
+                            ? 'opacity-50 cursor-not-allowed'
+                            : 'hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500'
+                          }`}>
+                        {answer.answer}
+                        {isOwnAnswer && <span className="ml-2 text-sm text-gray-500">(Your answer)</span>}
+                      </button>
+                    ) : (
+                      <div className="w-full p-4 bg-white rounded-lg shadow">
+                        {answer.answer}
+                      </div>
+                    )}
+                  </li>
+                  )
+                })}
             </ul>
+            {(hasSubmitted || !isPlayerMode) && (
+              <div className="mt-4 text-center p-6 bg-gray-50 rounded-lg">
+                <p className="text-lg text-gray-600">Waiting for all players to vote...</p>
+              </div>
+            )}
           </div>
         );
 
