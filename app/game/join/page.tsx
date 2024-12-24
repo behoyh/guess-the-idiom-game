@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
 
@@ -12,7 +12,7 @@ type Player = {
 
 type GameState = 'waiting' | 'submitting' | 'voting' | 'results' | 'gameOver';
 
-export default function JoinGame() {
+function JoinGameContent() {
   const searchParams = useSearchParams();
   const roomCode = searchParams.get('code') || '';
   const playerName = searchParams.get('name') || '';
@@ -79,12 +79,6 @@ export default function JoinGame() {
       newSocket.close();
     };
   }, [roomCode, playerName]);
-
-  const submitAnswer = () => {
-    if (socket && answer.trim()) {
-      socket.emit('submitAnswer', { roomCode, answer: answer.trim() });
-    }
-  };
 
   const submitVote = (votedForId: string) => {
     if (socket) {
@@ -229,5 +223,19 @@ export default function JoinGame() {
         {renderGameState()}
       </div>
     </main>
+  );
+}
+
+export default function JoinGame() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-gradient-to-br from-purple-600 to-blue-600 p-8">
+        <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-xl p-8">
+          <h1 className="text-3xl font-bold text-center mb-8">Loading...</h1>
+        </div>
+      </main>
+    }>
+      <JoinGameContent />
+    </Suspense>
   );
 }
