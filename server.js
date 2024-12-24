@@ -3,11 +3,12 @@ import { parse } from 'url';
 import next from 'next';
 import { Server } from 'socket.io';
 import { nanoid } from 'nanoid';
+import cors from 'cors';
 
 const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
 const handle = app.getRequestHandler();
-
+app.use(cors());
 // Game state
 const rooms = new Map();
 
