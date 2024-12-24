@@ -17,7 +17,12 @@ app.prepare().then(() => {
     handle(req, res, parsedUrl);
   });
 
-  const io = new Server(server);
+  const io = new Server(server, {
+    cors: {
+      origin: "https://idiom-game-201723471626.us-central1.run.app",
+      methods: ["GET", "POST"]
+    }
+  });
 
   io.on('connection', (socket) => {
     // Create a TV room (spectator mode)
