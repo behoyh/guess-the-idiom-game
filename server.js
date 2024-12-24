@@ -13,6 +13,18 @@ const rooms = new Map();
 
 app.prepare().then(() => {
   const server = createServer((req, res) => {
+    // Add CORS headers
+    res.setHeader('Access-Control-Allow-Origin', 'https://idiom-game-201723471626.us-central1.run.app');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    
+    // Handle OPTIONS request for CORS preflight
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
     const parsedUrl = parse(req.url, true);
     handle(req, res, parsedUrl);
   });
