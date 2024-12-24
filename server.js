@@ -32,8 +32,8 @@ app.prepare().then(() => {
 
   const io = new Server(server, {
     cors: {
-      origin: "https://idiom-game-201723471626.us-central1.run.app",
-      methods: ["GET", "POST"]
+      origin: '*',
+      methods: ["GET", "POST", "OPTIONS"]
     }
   });
 
