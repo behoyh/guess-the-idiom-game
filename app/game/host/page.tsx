@@ -23,6 +23,7 @@ export default function HostGame() {
   const [currentIdiom, setCurrentIdiom] = useState<string>('');
   const [answers, setAnswers] = useState<{ playerId: string, answer: string }[]>([]);
   const [scores, setScores] = useState<Player[]>([]);
+  const [answer, setAnswer] = useState<string>('');
 
   useEffect(() => {
     const newSocket = io('http://localhost:3000');
@@ -58,6 +59,7 @@ export default function HostGame() {
     newSocket.on('roundEnd', ({ scores: roundScores, nextRound }) => {
       setScores(roundScores);
       setGameState('results');
+      setAnswer('');
       setTimeout(() => {
         setCurrentIdiom(nextRound);
         setGameState('submitting');
@@ -116,22 +118,65 @@ export default function HostGame() {
           <div className="space-y-4">
             <h2 className="text-2xl font-bold">Current Idiom:</h2>
             <p className="text-xl bg-white p-4 rounded-lg shadow">{currentIdiom}</p>
-            <p className="text-lg">Waiting for players to submit their answers...</p>
+            
+            <div className="space-y-2">
+              <label htmlFor="answer" className="block text-sm font-medium text-gray-700">
+                Your Answer:
+              </label>
+              <textarea
+                id="answer"
+                value={answer}
+                onChange={(e) => setAnswer(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                rows={3}
+                placeholder="Enter your answer..."
+              />
+              <button
+                onClick={() => {
+                  if (socket && answer.trim()) {
+                    socket.emit('submitAnswer', { roomCode, answer: answer.trim() });
+                  }
+                }}
+                disabled={!answer.trim()}
+                className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Submit Answer
+              </button>
+            </div>
+            
+            <div className="mt-4">
+              <h3 className="text-lg font-medium mb-2">Waiting for answers from:</h3>
+              <ul className="space-y-2">
+                {players.map((player) => (
+                  <li key={player.id} className="bg-white p-3 rounded-lg shadow">
+                    {player.name}
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         );
 
       case 'voting':
         return (
           <div className="space-y-4">
-            <h2 className="text-2xl font-bold">Submitted Answers:</h2>
+            <h2 className="text-2xl font-bold">Vote for the correct answer:</h2>
             <ul className="space-y-2">
               {answers.map((answer, index) => (
-                <li key={index} className="bg-white p-3 rounded-lg shadow">
-                  {answer.answer}
+                <li key={index}>
+                  <button
+                    onClick={() => {
+                      if (socket) {
+                        socket.emit('submitVote', { roomCode, votedForId: answer.playerId });
+                      }
+                    }}
+                    className="w-full text-left p-4 bg-white rounded-lg shadow hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+                  >
+                    {answer.answer}
+                  </button>
                 </li>
               ))}
             </ul>
-            <p className="text-lg">Players are voting...</p>
           </div>
         );
 
