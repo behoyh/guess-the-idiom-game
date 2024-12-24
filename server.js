@@ -20,7 +20,34 @@ app.prepare().then(() => {
   const io = new Server(server);
 
   io.on('connection', (socket) => {
-    // Create a new room
+    // Create a TV room (spectator mode)
+    socket.on('createTVRoom', () => {
+      const roomCode = nanoid(6);
+      rooms.set(roomCode, {
+        host: socket.id,
+        players: [], // No host player in TV mode
+        state: 'waiting',
+        currentRound: 0,
+        submissions: new Map(),
+        votes: new Map(),
+        idioms: [
+          "It's raining cats and dogs",
+          "Break a leg",
+          "Piece of cake",
+          "Hit the nail on the head",
+          "Spill the beans",
+          "Cost an arm and a leg",
+          "Under the weather",
+          "Bite off more than you can chew",
+          "Beat around the bush",
+          "Pull someone's leg"
+        ]
+      });
+      socket.join(roomCode);
+      socket.emit('roomCreated', roomCode);
+    });
+
+    // Create a player room
     socket.on('createRoom', (hostName) => {
       const roomCode = nanoid(6);
       rooms.set(roomCode, {
