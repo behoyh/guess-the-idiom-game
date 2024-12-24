@@ -30,6 +30,7 @@ app.prepare().then(() => {
     handle(req, res, parsedUrl);
   });
 
+  
   const io = new Server(server, {
     cors: {
       origin: '*',
