@@ -42,6 +42,13 @@ function HostGameContent() {
           newSocket.emit('createTVRoom');
         }
       }
+      else {
+        if (isPlayerMode) {
+          newSocket.emit('joinRoom', { roomCode, playerName });
+        } else {
+          newSocket.emit('joinRoom', { roomCode });
+        }
+      }
     });
 
     newSocket.on('roomCreated', (code: string) => {
