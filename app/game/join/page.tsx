@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
+import TimerProgressBar from '../../components/TimerProgressBar';
 import { useSearchParams } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
 
@@ -21,6 +22,7 @@ function JoinGameContent() {
   const [hasSubmitted, setHasSubmitted] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [gameState, setGameState] = useState<GameState>('waiting');
+  const [startTime, setStartTime] = useState<number>(0);
   const [players, setPlayers] = useState<Player[]>([]);
   const [currentIdiom, setCurrentIdiom] = useState<string>('');
   const [answer, setAnswer] = useState<string>('');
@@ -28,7 +30,7 @@ function JoinGameContent() {
   const [scores, setScores] = useState<Player[]>([]);
 
   useEffect(() => {
-    const newSocket = io('http://localhost:3000');
+    const newSocket = io('https://idiom-game-201723471626.us-central1.run.app:3000');
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
@@ -54,10 +56,11 @@ function JoinGameContent() {
       setPlayers(gamePlayers);
     });
 
-    newSocket.on('startVoting', (submittedAnswers) => {
+    newSocket.on('startVoting', ({ answers: submittedAnswers, startTime: newStartTime }) => {
       setGameState('voting');
       setAnswers(submittedAnswers);
       setHasSubmitted(false);
+      setStartTime(newStartTime);
     });
 
     newSocket.on('roundEnd', ({ scores: roundScores, nextRound }) => {
@@ -136,7 +139,8 @@ function JoinGameContent() {
                   if (socket && answer.trim()) {
                     socket.emit('submitAnswer', { roomCode, answer: answer.trim() });
                     setHasSubmitted(true);
-                  } }}
+                  }
+                }}
                 disabled={!answer.trim()}
                 className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -155,6 +159,7 @@ function JoinGameContent() {
         return (
           <div className="space-y-4">
             <h2 className="text-2xl font-bold">Vote for the correct answer:</h2>
+            <TimerProgressBar startTime={startTime} duration={30000} />
             <ul className="space-y-2">
               {answers.map((answer, index) => {
                 const isOwnAnswer = players.find(p => p.name === playerName)?.id === answer.playerId;
@@ -164,8 +169,8 @@ function JoinGameContent() {
                       onClick={() => submitVote(answer.playerId)}
                       disabled={isOwnAnswer}
                       className={`w-full text-left p-4 bg-white rounded-lg shadow ${isOwnAnswer
-                          ? 'opacity-50 cursor-not-allowed'
-                          : 'hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500'
+                        ? 'opacity-50 cursor-not-allowed'
+                        : 'hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500'
                         }`}
                     >
                       {answer.answer}

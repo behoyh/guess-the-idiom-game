@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
+import TimerProgressBar from '@/app/components/TimerProgressBar';
 import { useSearchParams } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
 
@@ -20,6 +21,7 @@ function HostGameContent() {
   const [roomCode, setRoomCode] = useState<string>('');
   const [players, setPlayers] = useState<Player[]>([]);
   const [gameState, setGameState] = useState<GameState>('waiting');
+  const [startTime, setStartTime] = useState<number>(0);
   const [currentIdiom, setCurrentIdiom] = useState<string>('');
   const [answers, setAnswers] = useState<{ playerId: string, answer: string }[]>([]);
   const [scores, setScores] = useState<Player[]>([]);
@@ -28,7 +30,7 @@ function HostGameContent() {
   const [hasSubmitted, setHasSubmitted] = useState<boolean>(false);
 
   useEffect(() => {
-    const newSocket = io('http://localhost:3000');
+    const newSocket = io('https://idiom-game-201723471626.us-central1.run.app:3000');
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
@@ -51,16 +53,18 @@ function HostGameContent() {
       setPlayers(updatedPlayers);
     });
 
-    newSocket.on('gameStarted', ({ currentIdiom: idiom, players: gamePlayers }) => {
+    newSocket.on('gameStarted', ({ currentIdiom: idiom, players: gamePlayers, startTime: newStartTime }) => {
       setGameState('submitting');
       setCurrentIdiom(idiom);
       setPlayers(gamePlayers);
+      setStartTime(newStartTime);
     });
 
-    newSocket.on('startVoting', (submittedAnswers) => {
+    newSocket.on('startVoting', ({ answers: submittedAnswers, startTime: newStartTime }) => {
       setGameState('voting');
       setAnswers(submittedAnswers);
       setHasSubmitted(false);
+      setStartTime(newStartTime);
     });
 
     newSocket.on('roundEnd', ({ scores: roundScores, nextRound }) => {
@@ -213,6 +217,7 @@ function HostGameContent() {
             <h2 className="text-2xl font-bold">
               {isPlayerMode ? "Vote for the correct answer:" : "Players are voting..."}
             </h2>
+            <TimerProgressBar startTime={startTime} duration={30000} />
             <ul className="space-y-2">
               {
                 answers.map((answer, index) => {
@@ -228,8 +233,8 @@ function HostGameContent() {
                           }
                         }}
                         className={`w-full text-left p-4 bg-white rounded-lg shadow hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 ${isOwnAnswer
-                            ? 'opacity-50 cursor-not-allowed'
-                            : 'hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500'
+                          ? 'opacity-50 cursor-not-allowed'
+                          : 'hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500'
                           }`}>
                         {answer.answer}
                         {isOwnAnswer && <span className="ml-2 text-sm text-gray-500">(Your answer)</span>}

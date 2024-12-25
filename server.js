@@ -148,6 +148,12 @@ app.prepare().then(() => {
             [answers[i], answers[j]] = [answers[j], answers[i]];
           }
           io.to(roomCode).emit('startVoting', answers);
+          
+          room.timer = setTimeout(() => {
+            if (room.state === 'submitting') {
+              startVotingPhase(room, roomCode, io);
+            }
+          }, 30000);
         }
       }
     });
@@ -160,10 +166,10 @@ app.prepare().then(() => {
         const votedAnswer = Array.from(room.submissions.entries())
           .find(([playerId]) => playerId === votedForId);
         
-        // Only allow vote if:
-        // 1. The answer exists
-        // 2. It's not the player's own answer
-        // 3. The player hasn't voted yet
+        room.timer = setTimeout(() => {
+      
+        }, 30000);
+
         if (votedAnswer && 
             votedAnswer[0] !== socket.id && 
             !Array.from(room.votes.keys()).includes(socket.id)) {
@@ -172,7 +178,7 @@ app.prepare().then(() => {
 
         // Check if all players have voted (excluding the correct answer)
         const expectedVotes = room.players.length - 1;
-        if (room.votes.size === expectedVotes) {
+        if (room.votes.size === expectedVotes || room.timer.ela) {
           // Calculate scores
           const correctAnswer = room.idioms[room.currentRound];
           room.players.forEach(player => {
