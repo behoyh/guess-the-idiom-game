@@ -16,7 +16,7 @@ app.prepare().then(() => {
     res.setHeader('Access-Control-Allow-Origin', 'https://idiom-game-201723471626.us-central1.run.app');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    
+
     // Handle OPTIONS request for CORS preflight
     if (req.method === 'OPTIONS') {
       res.writeHead(204);
@@ -41,14 +41,7 @@ app.prepare().then(() => {
     let currentRoomCode = '';
     // Create a TV room (spectator mode)
     socket.on('createTVRoom', () => {
-      // If already in a room, rejoin that room
-      if (currentRoomCode && rooms.has(currentRoomCode)) {
-        socket.join(currentRoomCode);
-        socket.emit('roomCreated', currentRoomCode);
-        return;
-      }
       const roomCode = nanoid(6);
-      currentRoomCode = roomCode;
       rooms.set(roomCode, {
         host: socket.id,
         players: [], // No host player in TV mode
@@ -75,14 +68,7 @@ app.prepare().then(() => {
 
     // Create a player room
     socket.on('createRoom', (hostName) => {
-      // If already in a room, rejoin that room
-      if (currentRoomCode && rooms.has(currentRoomCode)) {
-        socket.join(currentRoomCode);
-        socket.emit('roomCreated', currentRoomCode);
-        return;
-      }
       const roomCode = nanoid(6);
-      currentRoomCode = roomCode;
       rooms.set(roomCode, {
         host: socket.id,
         players: [{ id: socket.id, name: hostName, score: 0 }],
@@ -109,16 +95,8 @@ app.prepare().then(() => {
 
     // Join a room
     socket.on('joinRoom', ({ roomCode, playerName }) => {
-      // If already in this room, just rejoin
-      if (currentRoomCode === roomCode && rooms.has(roomCode)) {
-        socket.join(roomCode);
-        const room = rooms.get(roomCode);
-        io.to(roomCode).emit('playerJoined', room.players);
-        return;
-      }
-      currentRoomCode = roomCode;
       console.log(rooms);
-      console.log("code"+roomCode);
+      console.log("code" + roomCode);
       const room = rooms.get(roomCode);
       if (room && room.state === 'waiting') {
         socket.join(roomCode);
@@ -140,7 +118,7 @@ app.prepare().then(() => {
         // In player mode (host is a player), require 3 players minimum
         const isPlayerMode = room.players.some(p => p.id === room.host);
         const hasEnoughPlayers = isPlayerMode ? room.players.length >= 3 : room.players.length >= 1;
-        
+
         if (hasEnoughPlayers) {
           room.state = 'submitting';
           room.currentRound = 0;
@@ -172,7 +150,7 @@ app.prepare().then(() => {
             [answers[i], answers[j]] = [answers[j], answers[i]];
           }
           io.to(roomCode).emit('startVoting', answers);
-          
+
           room.timer = setTimeout(() => {
             if (room.state === 'submitting') {
               startVotingPhase(room, roomCode, io);
@@ -189,14 +167,14 @@ app.prepare().then(() => {
         // Find the answer this player is voting for
         const votedAnswer = Array.from(room.submissions.entries())
           .find(([playerId]) => playerId === votedForId);
-        
+
         room.timer = setTimeout(() => {
-      
+
         }, 30000);
 
-        if (votedAnswer && 
-            votedAnswer[0] !== socket.id && 
-            !Array.from(room.votes.keys()).includes(socket.id)) {
+        if (votedAnswer &&
+          votedAnswer[0] !== socket.id &&
+          !Array.from(room.votes.keys()).includes(socket.id)) {
           room.votes.set(socket.id, votedForId);
         }
 
@@ -207,12 +185,12 @@ app.prepare().then(() => {
           const correctAnswer = room.idioms[room.currentRound];
           room.players.forEach(player => {
             const playerSubmission = room.submissions.get(player.id);
-            
+
             // Points for submitting the correct answer
             if (playerSubmission === correctAnswer) {
               player.score += 1000;
             }
-            
+
             // Points for fooling others (only if answer is not correct)
             if (playerSubmission !== correctAnswer) {
               const fooledCount = Array.from(room.votes.values())
