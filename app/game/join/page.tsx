@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useState, useRef } from 'react';
 import TimerProgressBar from '../../components/TimerProgressBar';
 import { useSearchParams } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
@@ -15,7 +15,8 @@ type GameState = 'waiting' | 'submitting' | 'voting' | 'results' | 'gameOver';
 
 function JoinGameContent() {
   const searchParams = useSearchParams();
-  const roomCode = searchParams.get('code') || '';
+  const initialRoomCode = searchParams.get('code') || '';
+  const roomCodeRef = useRef<string>(initialRoomCode);
   const playerName = searchParams.get('name') || '';
 
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -34,7 +35,9 @@ function JoinGameContent() {
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
-      newSocket.emit('joinRoom', { roomCode, playerName });
+      if (roomCodeRef.current) {
+        newSocket.emit('joinRoom', { roomCode: roomCodeRef.current, playerName });
+      }
     });
 
     newSocket.on('error', (message: string) => {
@@ -81,11 +84,11 @@ function JoinGameContent() {
     return () => {
       newSocket.close();
     };
-  }, [roomCode, playerName]);
+  }, [playerName]);
 
   const submitVote = (votedForId: string) => {
     if (socket) {
-      socket.emit('submitVote', { roomCode, votedForId });
+      socket.emit('submitVote', { roomCode: roomCodeRef.current, votedForId });
     }
   };
 
@@ -137,7 +140,7 @@ function JoinGameContent() {
               <button
                 onClick={() => {
                   if (socket && answer.trim()) {
-                    socket.emit('submitAnswer', { roomCode, answer: answer.trim() });
+                    socket.emit('submitAnswer', { roomCode: roomCodeRef.current, answer: answer.trim() });
                     setHasSubmitted(true);
                   }
                 }}

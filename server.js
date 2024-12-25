@@ -37,9 +37,18 @@ app.prepare().then(() => {
   });
 
   io.on('connection', (socket) => {
+    // Store the room code for reconnection
+    let currentRoomCode = '';
     // Create a TV room (spectator mode)
     socket.on('createTVRoom', () => {
+      // If already in a room, rejoin that room
+      if (currentRoomCode && rooms.has(currentRoomCode)) {
+        socket.join(currentRoomCode);
+        socket.emit('roomCreated', currentRoomCode);
+        return;
+      }
       const roomCode = nanoid(6);
+      currentRoomCode = roomCode;
       rooms.set(roomCode, {
         host: socket.id,
         players: [], // No host player in TV mode
@@ -66,7 +75,14 @@ app.prepare().then(() => {
 
     // Create a player room
     socket.on('createRoom', (hostName) => {
+      // If already in a room, rejoin that room
+      if (currentRoomCode && rooms.has(currentRoomCode)) {
+        socket.join(currentRoomCode);
+        socket.emit('roomCreated', currentRoomCode);
+        return;
+      }
       const roomCode = nanoid(6);
+      currentRoomCode = roomCode;
       rooms.set(roomCode, {
         host: socket.id,
         players: [{ id: socket.id, name: hostName, score: 0 }],
@@ -93,6 +109,14 @@ app.prepare().then(() => {
 
     // Join a room
     socket.on('joinRoom', ({ roomCode, playerName }) => {
+      // If already in this room, just rejoin
+      if (currentRoomCode === roomCode && rooms.has(roomCode)) {
+        socket.join(roomCode);
+        const room = rooms.get(roomCode);
+        io.to(roomCode).emit('playerJoined', room.players);
+        return;
+      }
+      currentRoomCode = roomCode;
       console.log(rooms);
       console.log("code"+roomCode);
       const room = rooms.get(roomCode);
