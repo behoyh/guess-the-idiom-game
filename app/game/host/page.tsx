@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState, useRef } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import TimerProgressBar from '@/app/components/TimerProgressBar';
 import { useSearchParams } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
@@ -19,7 +19,6 @@ function HostGameContent() {
 
   const [socket, setSocket] = useState<Socket | null>(null);
   const [roomCode, setRoomCode] = useState<string>('');
-  const roomCodeRef = useRef<string>('');
   const [players, setPlayers] = useState<Player[]>([]);
   const [gameState, setGameState] = useState<GameState>('waiting');
   const [startTime, setStartTime] = useState<number>(0);
@@ -36,7 +35,7 @@ function HostGameContent() {
 
     newSocket.on('connect', () => {
       // Only create a new room if we don't have one
-      if (!roomCodeRef.current) {
+      if (!roomCode) {
         if (isPlayerMode) {
           newSocket.emit('createRoom', playerName);
         } else {
@@ -47,7 +46,6 @@ function HostGameContent() {
 
     newSocket.on('roomCreated', (code: string) => {
       setRoomCode(code);
-      roomCodeRef.current = code;
     });
 
     newSocket.on('playerJoined', (updatedPlayers: Player[]) => {
@@ -90,7 +88,7 @@ function HostGameContent() {
     return () => {
       newSocket.close();
     };
-  }, [playerName, isPlayerMode]);
+  }, [playerName, isPlayerMode, roomCode]);
 
   const startGame = () => {
     if (socket && ((isPlayerMode && players.length >= 2) || (!isPlayerMode && players.length >= 1))) {
