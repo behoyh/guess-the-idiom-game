@@ -30,7 +30,7 @@ function JoinGameContent() {
   const [scores, setScores] = useState<Player[]>([]);
 
   useEffect(() => {
-    const newSocket = io('https://idiom-game-201723471626.us-central1.run.app:3000');
+    const newSocket = io();
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
