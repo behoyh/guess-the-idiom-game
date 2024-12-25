@@ -37,8 +37,6 @@ app.prepare().then(() => {
   });
 
   io.on('connection', (socket) => {
-    // Store the room code for reconnection
-    let currentRoomCode = '';
     // Create a TV room (spectator mode)
     socket.on('createTVRoom', () => {
       const roomCode = nanoid(6);
@@ -46,6 +44,7 @@ app.prepare().then(() => {
         host: socket.id,
         players: [], // No host player in TV mode
         state: 'waiting',
+        isPlayerMode: false,
         currentRound: 0,
         submissions: new Map(),
         votes: new Map(),
@@ -73,6 +72,7 @@ app.prepare().then(() => {
         host: socket.id,
         players: [{ id: socket.id, name: hostName, score: 0 }],
         state: 'waiting',
+        isPlayerMode: true,
         currentRound: 0,
         submissions: new Map(),
         votes: new Map(),
@@ -95,8 +95,6 @@ app.prepare().then(() => {
 
     // Join a room
     socket.on('joinRoom', ({ roomCode, playerName }) => {
-      console.log(rooms);
-      console.log("code" + roomCode);
       const room = rooms.get(roomCode);
       if (room && room.state === 'waiting') {
         socket.join(roomCode);
@@ -114,20 +112,16 @@ app.prepare().then(() => {
     // Start game
     socket.on('startGame', (roomCode) => {
       const room = rooms.get(roomCode);
-      if (room && socket.id === room.host) {
-        // In player mode (host is a player), require 3 players minimum
-        const isPlayerMode = room.players.some(p => p.id === room.host);
-        const hasEnoughPlayers = isPlayerMode ? room.players.length >= 3 : room.players.length >= 1;
-
-        if (hasEnoughPlayers) {
-          room.state = 'submitting';
-          room.currentRound = 0;
-          const currentIdiom = room.idioms[room.currentRound];
-          io.to(roomCode).emit('gameStarted', {
-            currentIdiom,
-            players: room.players
-          });
-        }
+      // require 3 players minimum
+      const hasEnoughPlayers = room.players.length >= 3;
+      if (hasEnoughPlayers) {
+        room.state = 'submitting';
+        room.currentRound = 0;
+        const currentIdiom = room.idioms[room.currentRound];
+        io.to(roomCode).emit('gameStarted', {
+          currentIdiom,
+          players: room.players
+        });
       }
     });
 
@@ -136,9 +130,14 @@ app.prepare().then(() => {
       const room = rooms.get(roomCode);
       if (room && room.state === 'submitting') {
         room.submissions.set(socket.id, answer);
+        expectedSubmissions = room.players.length
+        if (!room.isPlayerMode) {
+          // TV does not count as a player
+          expectedSubmissions = expectedSubmissions - 1;
+        }
 
         // Check if all players have submitted
-        if (room.submissions.size === room.players.length) {
+        if (room.submissions.size === expectedSubmissions) {
           room.state = 'voting';
           const answers = Array.from(room.submissions.entries()).map(([playerId, answer]) => ({
             playerId,
@@ -178,8 +177,11 @@ app.prepare().then(() => {
           room.votes.set(socket.id, votedForId);
         }
 
-        // Check if all players have voted (excluding the correct answer)
         const expectedVotes = room.players.length - 1;
+        if (!room.isPlayerMode) {
+          // TV does not count as a player
+          expectedVotes = expectedVotes - 1; 
+        }
         if (room.votes.size === expectedVotes || room.timer.ela) {
           // Calculate scores
           const correctAnswer = room.idioms[room.currentRound];
