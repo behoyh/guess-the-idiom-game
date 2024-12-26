@@ -85,7 +85,26 @@ app.prepare().then(() => {
             name: playerName,
             score: room.players[index].score
           };
-          io.to(roomCode).emit('playerRejoined', room.players);
+          if (room.state === 'waiting') {
+            io.to(socket.id).emit('roomCreated', roomCode);
+          }
+          else if (room.state === 'submitting') {
+            if (room.currentRound < room.idioms.length) {
+              io.to(socket.id).emit('roundEnd', {
+                scores: room.players,
+                nextRound: room.idioms[room.currentRound]
+              });
+          }
+          else if (room.state === 'voting') {
+            const answers = Array.from(room.submissions.entries()).map(([playerId, answer]) => ({
+              playerId,
+              answer
+            }));
+            io.to(socket.id).emit('startVoting', { answers: answers })
+          }
+          else if (room.state === 'gameOver') {
+            io.to(socket.id).emit('gameOver', room.players);
+          }
         }
         else {
           socket.emit('error', 'Room not found or game in progress');
