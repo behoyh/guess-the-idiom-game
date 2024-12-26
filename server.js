@@ -79,15 +79,16 @@ app.prepare().then(() => {
           };
         }
         else {
-          room.players.push({
-            id: socket.id,
-            name: playerName,
-            score: 0
-          });
-
+          if (playerName) {
+            room.players.push({
+              id: socket.id,
+              name: playerName,
+              score: 0
+            });
+            io.to(roomCode).emit('playerJoined', room.players);
+          }
         }
         socket.join(roomCode);
-        io.to(roomCode).emit('playerJoined', room.players);
       } else if (room) {
         const index = room.players.findIndex(obj => obj.name === playerName);
         if (index !== -1) {
