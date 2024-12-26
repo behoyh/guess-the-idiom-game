@@ -37,42 +37,16 @@ app.prepare().then(() => {
   });
 
   io.on('connection', (socket) => {
-    // Create a TV room (spectator mode)
-    socket.on('createTVRoom', () => {
+    // Create a room
+    socket.on('createRoom', ({ hostName }) => {
       const roomCode = nanoid(6);
-      rooms.set(roomCode, {
-        host: socket.id,
-        players: [], // No host player in TV mode
-        state: 'waiting',
-        isPlayerMode: false,
-        currentRound: 0,
-        submissions: new Map(),
-        votes: new Map(),
-        idioms: [
-          "It's raining cats and dogs",
-          "Break a leg",
-          "Piece of cake",
-          "Hit the nail on the head",
-          "Spill the beans",
-          "Cost an arm and a leg",
-          "Under the weather",
-          "Bite off more than you can chew",
-          "Beat around the bush",
-          "Pull someone's leg"
-        ]
-      });
-      socket.join(roomCode);
-      socket.emit('roomCreated', roomCode);
-    });
+      const initialPlayers = hostName ? [{ name: hostName, score: 0 }] : [];
 
-    // Create a player room
-    socket.on('createRoom', (hostName) => {
-      const roomCode = nanoid(6);
       rooms.set(roomCode, {
         host: socket.id,
-        players: [{ id: socket.id, name: hostName, score: 0 }],
+        players: initialPlayers,
         state: 'waiting',
-        isPlayerMode: true,
+        isPlayerMode: initialPlayers > 0,
         currentRound: 0,
         submissions: new Map(),
         votes: new Map(),
@@ -130,7 +104,8 @@ app.prepare().then(() => {
       const room = rooms.get(roomCode);
       if (room && room.state === 'submitting') {
         room.submissions.set(socket.id, answer);
-        expectedSubmissions = room.players.length
+
+        let expectedSubmissions = room.players.length
         if (!room.isPlayerMode) {
           // TV does not count as a player
           expectedSubmissions = expectedSubmissions - 1;
@@ -143,18 +118,8 @@ app.prepare().then(() => {
             playerId,
             answer
           }));
-          // Shuffle answers
-          for (let i = answers.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [answers[i], answers[j]] = [answers[j], answers[i]];
-          }
+          console.log(answers);
           io.to(roomCode).emit('startVoting', answers);
-
-          room.timer = setTimeout(() => {
-            if (room.state === 'submitting') {
-              startVotingPhase(room, roomCode, io);
-            }
-          }, 30000);
         }
       }
     });
@@ -177,10 +142,10 @@ app.prepare().then(() => {
           room.votes.set(socket.id, votedForId);
         }
 
-        const expectedVotes = room.players.length - 1;
+        let expectedVotes = room.players.length - 1;
         if (!room.isPlayerMode) {
           // TV does not count as a player
-          expectedVotes = expectedVotes - 1; 
+          expectedVotes = expectedVotes - 1;
         }
         if (room.votes.size === expectedVotes || room.timer.ela) {
           // Calculate scores
