@@ -131,9 +131,7 @@ function HostGameContent() {
               <div className="flex justify-between items-center mb-3">
                 <h2 className="text-xl font-semibold">Players:</h2>
                 <span className="text-sm text-gray-600">
-                  {isPlayerMode
-                    ? `${players.length} of 3 minimum players`
-                    : `${players.length} of 1 minimum players`}
+                  {`${players.length} of 3 minimum players`}
                 </span>
               </div>
               {players.length > 0 ? (
@@ -154,7 +152,7 @@ function HostGameContent() {
             {!isPlayerMode && (
               <div className="border-t pt-4">
                 <p className="text-sm text-gray-600 text-center mb-3">
-                  Want to play instead of just watching?
+                  Want to play instead of just hosting?
                 </p>
                 <button
                   onClick={createPlayerRoom}
@@ -167,9 +165,8 @@ function HostGameContent() {
 
             <button
               onClick={startGame}
-              disabled={(isPlayerMode && players.length < 3) || (!isPlayerMode && players.length < 1)}
-              className="w-full py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+              disabled={players.length < 3}
+              className="w-full py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed">
               Start Game
             </button>
           </div>

@@ -79,7 +79,7 @@ app.prepare().then(() => {
         io.to(roomCode).emit('playerJoined', room.players);
       } else if (room) {
         const index = room.players.findIndex(obj => obj.name === playerName);
-        if (index > -1) {
+        if (index !== -1) {
           room.players[index] = {
             id: socket.id,
             name: playerName,
@@ -206,13 +206,15 @@ app.prepare().then(() => {
       rooms.forEach((room, roomCode) => {
         const playerIndex = room.players.findIndex(p => p.id === socket.id);
         if (playerIndex !== -1) {
-          room.players.splice(playerIndex, 1);
-          if (room.players.length === 0) {
-            rooms.delete(roomCode);
-          } else if (socket.id === room.host) {
-            room.host = room.players[0].id;
-          }
-          io.to(roomCode).emit('playerLeft', room.players);
+          setTimeout(() => {
+            room.players.splice(playerIndex, 1)
+            if (room.players.length === 0) {
+              rooms.delete(roomCode);
+            } else if (socket.id === room.host) {
+              room.host = room.players[0].id;
+            }
+            io.to(roomCode).emit('playerLeft', room.players);
+          }, 900000);
         }
       });
     });
