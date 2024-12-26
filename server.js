@@ -75,7 +75,7 @@ app.prepare().then(() => {
           room.players[index] = {
             id: socket.id,
             name: playerName,
-            score: room.players[index].score
+            score: 0
           };
           socket.join(roomCode);
         }
