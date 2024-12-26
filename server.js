@@ -70,12 +70,23 @@ app.prepare().then(() => {
     socket.on('joinRoom', ({ roomCode, playerName }) => {
       const room = rooms.get(roomCode);
       if (room && room.state === 'waiting') {
-        socket.join(roomCode);
-        room.players.push({
-          id: socket.id,
-          name: playerName,
-          score: 0
-        });
+        const index = room.players.findIndex(obj => obj.name === playerName);
+        if (index !== -1) {
+          room.players[index] = {
+            id: socket.id,
+            name: playerName,
+            score: room.players[index].score
+          };
+          socket.join(roomCode);
+        }
+        else {
+          room.players.push({
+            id: socket.id,
+            name: playerName,
+            score: 0
+          });
+          socket.join(roomCode);
+        }
         io.to(roomCode).emit('playerJoined', room.players);
       } else if (room) {
         const index = room.players.findIndex(obj => obj.name === playerName);
@@ -85,6 +96,7 @@ app.prepare().then(() => {
             name: playerName,
             score: room.players[index].score
           };
+          socket.join(roomCode);
           if (room.state === 'waiting') {
             socket.emit('roomCreated', roomCode);
           }
