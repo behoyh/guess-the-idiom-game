@@ -94,7 +94,7 @@ function HostGameContent() {
   }, [playerName, isPlayerMode, roomCode]);
 
   const startGame = () => {
-    if (socket && ((isPlayerMode && players.length >= 2) || (!isPlayerMode && players.length >= 1))) {
+    if (socket && (isPlayerMode && players.length >= 2)) {
       socket.emit('startGame', roomCode);
     }
   };
@@ -131,7 +131,7 @@ function HostGameContent() {
               <div className="flex justify-between items-center mb-3">
                 <h2 className="text-xl font-semibold">Players:</h2>
                 <span className="text-sm text-gray-600">
-                  {`${players.length} of 3 minimum players`}
+                  {`${isPlayerMode ? players.length : players.length - 1} of 3 minimum players`}
                 </span>
               </div>
               {players.length > 0 ? (
@@ -165,7 +165,7 @@ function HostGameContent() {
 
             <button
               onClick={startGame}
-              disabled={players.length < 3}
+              disabled={(isPlayerMode == true ? players.length : players.length - 1) as number < 3}
               className="w-full py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed">
               Start Game
             </button>
