@@ -1,7 +1,6 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
-import TimerProgressBar from '../../components/TimerProgressBar';
 import { useSearchParams } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
 
@@ -21,7 +20,6 @@ function JoinGameContent() {
   const [hasSubmitted, setHasSubmitted] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [gameState, setGameState] = useState<GameState>('waiting');
-  const [startTime, setStartTime] = useState<number>(0);
   const [players, setPlayers] = useState<Player[]>([]);
   const [currentIdiom, setCurrentIdiom] = useState<string>('');
   const [answer, setAnswer] = useState<string>('');
@@ -55,11 +53,10 @@ function JoinGameContent() {
       setPlayers(gamePlayers);
     });
 
-    newSocket.on('startVoting', ({ answers: submittedAnswers, startTime: newStartTime }) => {
+    newSocket.on('startVoting', ({ answers: submittedAnswers }) => {
       setGameState('voting');
       setAnswers(submittedAnswers);
       setHasSubmitted(false);
-      setStartTime(newStartTime);
     });
 
     newSocket.on('roundEnd', ({ scores: roundScores, nextRound }) => {
@@ -158,7 +155,6 @@ function JoinGameContent() {
         return (
           <div className="space-y-4">
             <h2 className="text-2xl font-bold">Vote for the correct answer:</h2>
-            <TimerProgressBar startTime={startTime} duration={30000} />
             <ul className="space-y-2">
               {answers.map((answer, index) => {
                 const isOwnAnswer = players.find(p => p.name === playerName)?.id === answer.playerId;

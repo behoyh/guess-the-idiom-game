@@ -155,10 +155,6 @@ app.prepare().then(() => {
         const votedAnswer = Array.from(room.submissions.entries())
           .find(([playerId]) => playerId === votedForId);
 
-        room.timer = setTimeout(() => {
-
-        }, 30000);
-
         if (votedAnswer &&
           votedAnswer[0] !== socket.id &&
           !Array.from(room.votes.keys()).includes(socket.id)) {
@@ -166,7 +162,7 @@ app.prepare().then(() => {
         }
 
         let expectedVotes = room.players.length - 1;
-        if (room.votes.size === expectedVotes || room.timer.ela) {
+        if (room.votes.size === expectedVotes) {
           // Calculate scores
           const correctAnswer = room.idioms[room.currentRound];
           room.players.forEach(player => {
