@@ -78,7 +78,18 @@ app.prepare().then(() => {
         });
         io.to(roomCode).emit('playerJoined', room.players);
       } else {
-        socket.emit('error', 'Room not found or game in progress');
+        const index = room.players.findIndex(obj => obj.name === playerName);
+        if (index > -1) {
+          room.players[index] = {
+            id: socket.id,
+            name: playerName,
+            score: room.players[index].score
+          };
+          io.to(roomCode).emit('playerRejoined', room.players);
+        }
+        else {
+          socket.emit('error', 'Room not found or game in progress');
+        }
       }
     });
 
