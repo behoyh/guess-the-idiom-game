@@ -46,7 +46,6 @@ app.prepare().then(() => {
         host: socket.id,
         players: initialPlayers,
         state: 'waiting',
-        isPlayerMode: initialPlayers > 0,
         currentRound: 0,
         submissions: new Map(),
         votes: new Map(),
@@ -106,7 +105,7 @@ app.prepare().then(() => {
         room.submissions.set(socket.id, answer);
 
         // Check if all players have submitted
-        if (room.submissions.size === expectedSubmissions) {
+        if (room.submissions.size === room.players.length) {
           room.state = 'voting';
           const answers = Array.from(room.submissions.entries()).map(([playerId, answer]) => ({
             playerId,
