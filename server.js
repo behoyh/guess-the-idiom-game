@@ -105,12 +105,6 @@ app.prepare().then(() => {
       if (room && room.state === 'submitting') {
         room.submissions.set(socket.id, answer);
 
-        let expectedSubmissions = room.players.length
-        if (!room.isPlayerMode) {
-          // TV does not count as a player
-          expectedSubmissions = expectedSubmissions - 1;
-        }
-
         // Check if all players have submitted
         if (room.submissions.size === expectedSubmissions) {
           room.state = 'voting';
@@ -118,8 +112,7 @@ app.prepare().then(() => {
             playerId,
             answer
           }));
-          console.log(answers);
-          io.to(roomCode).emit('startVoting', answers);
+          io.to(roomCode).emit('startVoting', { answers: answers });
         }
       }
     });
@@ -143,10 +136,6 @@ app.prepare().then(() => {
         }
 
         let expectedVotes = room.players.length - 1;
-        if (!room.isPlayerMode) {
-          // TV does not count as a player
-          expectedVotes = expectedVotes - 1;
-        }
         if (room.votes.size === expectedVotes || room.timer.ela) {
           // Calculate scores
           const correctAnswer = room.idioms[room.currentRound];
