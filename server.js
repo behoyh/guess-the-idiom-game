@@ -77,7 +77,7 @@ app.prepare().then(() => {
           score: 0
         });
         io.to(roomCode).emit('playerJoined', room.players);
-      } else {
+      } else if (room) {
         const index = room.players.findIndex(obj => obj.name === playerName);
         if (index > -1) {
           room.players[index] = {
@@ -106,10 +106,9 @@ app.prepare().then(() => {
               socket.emit('gameOver', room.players);
             }
           }
-          else {
-            socket.emit('error', 'Room not found or game in progress');
-          }
         }
+      } else {
+        socket.emit('error', 'Room not found or game in progress');
       }
     });
 
